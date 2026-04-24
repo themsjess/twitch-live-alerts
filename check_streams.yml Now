@@ -1,43 +1,51 @@
-name: Twitch Live Check
+posted_file="posted.json"
+posted=$(cat $posted_file)
 
-on:
-  schedule:
-    - cron: "*/5 * * * *"  # every 5 minutes
-  workflow_dispatch:
+streamers=("iblamejosephh" "ManicPan" "BoldyLocks91" "diamondbat_" "BigBadDude83" "helanamatta" "mochabeautyxo_")
 
-jobs:
-  check:
-    runs-on: ubuntu-latest
+for streamer in "${streamers[@]}"
+do
+  url="https://twitch.tv/$streamer"
+  thumb="https://static-cdn.jtvnw.net/previews-ttv/live_user_${streamer}-320x180.jpg"
 
-    steps:
-      - name: Check streams
-        run: |
-          streamers=("iblamejosephh" "ManicPan" "boldylocks91" "diamondbat_" "BigBadDude83" "helanamatta" "mochabeautyxo_")
+  status=$(curl -s https://decapi.me/twitch/uptime/$streamer)
 
-          for streamer in "${streamers[@]}"
-          do
-            status=$(curl -s https://decapi.me/twitch/uptime/$streamer)
+  is_live=$(echo "$status" | grep -c "offline")
 
-            if [[ $status != *"offline"* ]]; then
-              curl -H "Content-Type: application/json" \
-              -X POST \
-              -d "{
-  \"embeds\": [
-    {
-      \"title\": \"🔴 $streamer is LIVE\",
-      \"description\": \"Click to watch now: https://twitch.tv/$streamer\",
-      \"url\": \"https://twitch.tv/$streamer\",
-      \"color\": 16711680,
-      \"thumbnail\": {
-        \"url\": \"https://static-cdn.jtvnw.net/previews-ttv/live_user_${streamer}-320x180.jpg\"
-      },
-      \"footer\": {
-        \"text\": \"Twitch Live Alerts\"
-      }
-    }
-  ]
-}"
- \
-              https://discord.com/api/webhooks/1497062577304506394/g1vutyNJ4_rrydRh5YTLBZlhsqu7gnhzMh-DqLJC03A4yUKVhM8Enkc6Jy1qJ-NMiWcE
-            fi
-          done
+  already_posted=$(echo "$posted" | grep -c "\"$streamer\"")
+
+  # IF LIVE AND NOT POSTED YET
+  if [[ $is_live -eq 0 && $already_posted -eq 0 ]]; then
+
+    curl -H "Content-Type: application/json" \
+    -X POST \
+    -d "{
+      \"embeds\": [
+        {
+          \"title\": \"🔴 $streamer is LIVE\",
+          \"description\": \"Click to watch: $url\",
+          \"url\": \"$url\",
+          \"color\": 16711680,
+          \"thumbnail\": {
+            \"url\": \"$thumb\"
+          },
+          \"footer\": {
+            \"text\": \"Twitch Live Alerts\"
+          }
+        }
+      ]
+    }" \
+    YOUR_WEBHOOK_URL
+
+    posted=$(echo "$posted" | jq '.live += ["'"$streamer"'"]')
+
+  fi
+
+  # IF OFFLINE → REMOVE FROM LIST
+  if [[ $is_live -ne 0 && $already_posted -eq 1 ]]; then
+    posted=$(echo "$posted" | jq 'del(.live[] | select(. == "'"$streamer"'"))')
+  fi
+
+done
+
+echo "$posted" > posted.json
