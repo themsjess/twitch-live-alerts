@@ -1,0 +1,27 @@
+name: Twitch Live Check
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check streams
+        run: |
+          streamers=("iblamejosephh" "ManicPan" "boldylocks91" "diamondbat_" "BigBadDude83" "helanamatta" "mochabeautyxo_")
+
+          for streamer in "${streamers[@]}"
+          do
+            status=$(curl -s https://decapi.me/twitch/uptime/$streamer)
+
+            if [[ $status != *"offline"* ]]; then
+              curl -H "Content-Type: application/json" \
+              -X POST \
+              -d "{\"content\":\"🔴 $streamer is LIVE! https://twitch.tv/$streamer\"}" \
+              https://discord.com/api/webhooks/1497062577304506394/g1vutyNJ4_rrydRh5YTLBZlhsqu7gnhzMh-DqLJC03A4yUKVhM8Enkc6Jy1qJ-NMiWcE
+            fi
+          done
