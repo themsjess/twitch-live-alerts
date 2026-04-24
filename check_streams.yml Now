@@ -21,7 +21,23 @@ jobs:
             if [[ $status != *"offline"* ]]; then
               curl -H "Content-Type: application/json" \
               -X POST \
-              -d "{\"content\":\"🔴 $streamer is LIVE! https://twitch.tv/$streamer\"}" \
+              -d "{
+  \"embeds\": [
+    {
+      \"title\": \"🔴 $streamer is LIVE\",
+      \"description\": \"Click to watch now: https://twitch.tv/$streamer\",
+      \"url\": \"https://twitch.tv/$streamer\",
+      \"color\": 16711680,
+      \"thumbnail\": {
+        \"url\": \"https://static-cdn.jtvnw.net/previews-ttv/live_user_${streamer}-320x180.jpg\"
+      },
+      \"footer\": {
+        \"text\": \"Twitch Live Alerts\"
+      }
+    }
+  ]
+}"
+ \
               https://discord.com/api/webhooks/1497062577304506394/g1vutyNJ4_rrydRh5YTLBZlhsqu7gnhzMh-DqLJC03A4yUKVhM8Enkc6Jy1qJ-NMiWcE
             fi
           done
